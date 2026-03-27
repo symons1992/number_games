@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🐻 数字小课堂 - 和小熊一起学数字</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { font-family: 'Arial Rounded MT Bold', 'Helvetica Neue', Arial, sans-serif; background: #FFF8E7; }
+
+    .bear-bg {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+      background: radial-gradient(circle at 20% 80%, #FFE4B5 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, #B0E0E6 0%, transparent 50%),
+                  radial-gradient(circle at 50% 50%, #FFB6C1 0%, transparent 30%);
+    }
+
+    .clouds { position: fixed; top: 0; left: 0; width: 100%; height: 200px; pointer-events: none; z-index: 0; overflow: hidden; }
+    .cloud { position: absolute; background: white; border-radius: 50px; opacity: 0.7; animation: floatCloud linear infinite; }
+    @keyframes floatCloud { from { transform: translateX(100vw); } to { transform: translateX(-200px); } }
+    .cloud:nth-child(1) { width: 100px; height: 40px; top: 20px; animation-duration: 25s; }
+    .cloud:nth-child(2) { width: 60px; height: 30px; top: 60px; animation-duration: 18s; animation-delay: -5s; }
+    .cloud:nth-child(3) { width: 80px; height: 35px; top: 100px; animation-duration: 30s; animation-delay: -12s; }
+
+    /* === BASE SIZING (normal mode) === */
+    :root {
+      --item-size: clamp(56px, 14vw);
+      --question-size: clamp(26px, 6vw);
+      --choice-size: clamp(40px, 10vw);
+      --choice-padding: clamp(16px, 4vw);
+      --choice-gap: 14px;
+      --feedback-emoji: clamp(70px, 17vw);
+      --feedback-text: clamp(22px, 5.5vw);
+      --count-item: clamp(50px, 12vw);
+      --count-input-size: clamp(36px, 9vw);
+      --count-input-width: clamp(110px, 28vw);
+      --submit-size: clamp(22px, 5.5vw);
+      --submit-padding: clamp(14px, 3.5vw) clamp(28px, 7vw);
+      --grid-cell-size: clamp(28px, 7vw);
+      --grid-gap: clamp(5px, 1.8vw);
+      --progress-width: min(340px, 88vw);
+      --trace-size: min(300px, 75vw);
+      --trace-font: min(120px, 32vw);
+      --next-btn-font: clamp(20px, 5vw);
+      --next-btn-padding: clamp(16px, 4vw) clamp(44px, 11vw);
+      --home-title: 28px;
+      --home-emoji: 52px;
+      --home-card-title: 18px;
+      --home-card-emoji: 52px;
+      --home-grid-gap: 14px;
+      --topbar-h: 60px;
+    }
+
+    /* === FULLSCREEN MODE - game UI larger, home stays compact === */
+    body.is-fullscreen {
+      --item-size: 6vw;
+      --question-size: 2.6vw;
+      --choice-size: 4.5vw;
+      --choice-padding: 1.8vw;
+      --choice-gap: 1vw;
+      --feedback-emoji: 7vw;
+      --feedback-text: 2.2vw;
+      --count-item: 5.5vw;
+      --count-input-size: 3vw;
+      --count-input-width: 13vw;
+      --submit-size: 2.4vw;
+      --submit-padding: 1.3vw 3vw;
+      --grid-cell-size: 3.8vw;
+      --grid-gap: 0.9vw;
+      --progress-width: 60vw;
+      --trace-size: 36vw;
+      --trace-font: 20vw;
+      --next-btn-font: 2.2vw;
+      --next-btn-padding: 1.3vw 4vw;
+      --home-title: 30px;
+      --home-emoji: 56px;
+      --home-card-title: 19px;
+      --home-card-emoji: 56px;
+      --home-grid-gap: 16px;
+      --topbar-h: 68px;
+    }
+
+    .page { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100vh; padding: 20px; padding-top: var(--topbar-h); position: relative; z-index: 1; }
+    .page.active { display: flex; }
+
+    .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--home-grid-gap); width: 100%; max-width: 600px; padding: 16px; }
+    .home-card {
+      background: white; border-radius: 24px; padding: calc(var(--home-emoji) * 0.6) 16px;
+      text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 3px solid transparent;
+      user-select: none; -webkit-user-select: none;
+    }
+    .home-card:active { transform: scale(0.95); }
+    .home-card .emoji { font-size: var(--home-emoji); margin-bottom: 8px; display: block; }
+    .home-card .title { font-size: var(--home-card-title); color: #333; font-weight: bold; }
+    .home-card:nth-child(1) { border-color: #FF6B6B; background: #FFF5F5; }
+    .home-card:nth-child(2) { border-color: #4ECDC4; background: #F0FFFE; }
+    .home-card:nth-child(3) { border-color: #FFE66D; background: #FFFEF0; }
+    .home-card:nth-child(4) { border-color: #A8E6CF; background: #F5FFF9; }
+
+    .home-title { font-size: var(--home-title); color: #FF6B6B; margin-bottom: 8px; font-weight: bold; text-align: center; }
+    .home-subtitle { font-size: 16px; color: #888; margin-bottom: 20px; text-align: center; }
+
+    /* Top bar */
+    .top-bar { position: fixed; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; z-index: 100; height: var(--topbar-h); }
+    .top-bar-left, .top-bar-right { display: flex; gap: 10px; align-items: center; }
+
+    .icon-btn {
+      width: 44px; height: 44px; border-radius: 50%; background: white;
+      border: none; font-size: 20px; cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: center;
+    }
+    .icon-btn:active { transform: scale(0.92); }
+    .icon-btn.muted { background: #FFE5E5; }
+    .score-display { background: white; border-radius: 20px; padding: 7px 16px; font-size: 16px; color: #FF6B6B; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }
+
+    /* === Game elements === */
+    .item-area { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: min(520px, 92vw); margin-bottom: 20px; }
+    body.is-fullscreen .item-area { gap: 2vw; max-width: 85vw; margin-bottom: 3vw; }
+    .item { font-size: var(--item-size); animation: popIn 0.3s ease; }
+    @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+    .count-question { font-size: var(--question-size); color: #FF6B6B; font-weight: bold; margin-bottom: 18px; text-align: center; }
+    .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--choice-gap); width: 100%; max-width: min(380px, 92vw); }
+    body.is-fullscreen .choices { max-width: 85vw; }
+    .choice-btn {
+      background: white; border: 3px solid #ddd; border-radius: 18px;
+      font-size: var(--choice-size); font-weight: bold; padding: var(--choice-padding); cursor: pointer;
+      transition: all 0.15s; color: #333;
+    }
+    .choice-btn:active { transform: scale(0.92); }
+    .choice-btn.correct { border-color: #4ECDC4; background: #B0F0E8; color: #00897B; animation: correctPop 0.4s; }
+    .choice-btn.wrong { border-color: #FF6B6B; background: #FFE5E5; color: #D32F2F; animation: shake 0.4s; }
+    @keyframes correctPop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+    .feedback-emoji { font-size: var(--feedback-emoji); animation: feedbackPop 0.5s ease; display: block; }
+    @keyframes feedbackPop { 0% { transform: scale(0) rotate(-20deg); } 60% { transform: scale(1.3) rotate(10deg); } 100% { transform: scale(1) rotate(0); } }
+    .feedback-text { font-size: var(--feedback-text); color: #333; margin-top: 8px; font-weight: bold; }
+    .feedback-area { text-align: center; margin-top: 15px; opacity: 0; transform: translateY(-10px); transition: opacity 0.3s ease, transform 0.3s ease; pointer-events: none; }
+    .feedback-area.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+    .confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200; }
+    .confetti-piece { position: absolute; width: 10px; height: 10px; border-radius: 2px; animation: confettiFall 1.5s ease forwards; }
+    @keyframes confettiFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+    /* === 数数 === */
+    .counting-area { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: min(360px, 92vw); margin: 15px 0; }
+    .count-item { font-size: var(--count-item); animation: popIn 0.3s ease; }
+    .count-question2 { font-size: var(--question-size); color: #4ECDC4; font-weight: bold; margin-bottom: 12px; text-align: center; }
+    .count-input { font-size: var(--count-input-size); width: var(--count-input-width); text-align: center; border: 3px solid #4ECDC4; border-radius: 14px; padding: 8px; outline: none; }
+    .count-submit { font-size: var(--submit-size); background: #4ECDC4; color: white; border: none; border-radius: 14px; padding: var(--submit-padding); margin-top: 12px; cursor: pointer; font-weight: bold; }
+
+    /* === 找数字 === */
+    .grid-5x5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--grid-gap); width: min(380px, 92vw); }
+    .grid-cell { aspect-ratio: 1; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: var(--grid-cell-size); cursor: pointer; transition: all 0.15s; box-shadow: 0 2px 6px rgba(0,0,0,0.08); user-select: none; }
+    .grid-cell:active { transform: scale(0.9); }
+    .grid-cell.highlighted { background: #FFE66D; }
+    .grid-cell.found { background: #A8E6CF; color: #2E7D32; }
+
+    /* === 描红 === */
+    .trace-prompt { font-size: var(--question-size); color: #666; margin-bottom: 12px; text-align: center; }
+    .trace-canvas { background: white; border-radius: 20px; border: 4px solid #ddd; touch-action: none; cursor: crosshair; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: var(--trace-size); height: var(--trace-size); }
+    .trace-number { font-size: var(--trace-font); color: #ddd; position: absolute; pointer-events: none; font-weight: bold; z-index: 2; }
+
+    .next-btn {
+      background: linear-gradient(135deg, #FF6B6B, #FF8E8E); color: white;
+      border: none; border-radius: 50px; padding: var(--next-btn-padding); font-size: var(--next-btn-font);
+      font-weight: bold; cursor: pointer; margin-top: 18px; box-shadow: 0 4px 15px rgba(255,107,107,0.4);
+      transition: transform 0.15s;
+    }
+    .next-btn:active { transform: scale(0.95); }
+
+    .game-complete { text-align: center; }
+    .game-complete .big-emoji { font-size: var(--feedback-emoji); display: block; }
+    .game-complete h2 { font-size: var(--feedback-text); color: #FF6B6B; margin: 12px 0; }
+    .game-complete p { font-size: var(--feedback-text); color: #666; margin-bottom: 18px; }
+
+    .progress-bar { width: var(--progress-width); height: 10px; background: #eee; border-radius: 5px; margin-bottom: 18px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #FF6B6B, #FFE66D); border-radius: 5px; transition: width 0.5s ease; }
+  </style>
+</head>
+<body>
+
+<div class="bear-bg"></div>
+<div class="clouds">
+  <div class="cloud"></div><div class="cloud"></div><div class="cloud"></div>
+</div>
+
+<!-- Top bar - 主页 -->
+<div class="top-bar" id="homeTopBar">
+  <div class="top-bar-left">
+    <button class="icon-btn" id="homeFullscreenBtn" onclick="toggleFullscreen()">📺</button>
+    <button class="icon-btn" id="homeMuteBtn" onclick="toggleMute()">🔊</button>
+  </div>
+</div>
+
+<!-- Top bar - 游戏页面 -->
+<div class="top-bar" id="topBar" style="display:none">
+  <div class="top-bar-left">
+    <button class="icon-btn" onclick="goHome()">🏠</button>
+    <button class="icon-btn" id="fullscreenBtn" onclick="toggleFullscreen()">📺</button>
+    <button class="icon-btn" id="muteBtn" onclick="toggleMute()">🔊</button>
+  </div>
+  <div class="top-bar-right">
+    <div class="score-display" id="scoreDisplay">⭐ <span id="scoreNum">0</span></div>
+  </div>
+</div>
+
+<div class="confetti" id="confetti"></div>
+
+<!-- 首页 -->
+<div class="page active" id="page-home">
+  <div class="home-title">🐻 数字小课堂</div>
+  <div class="home-subtitle">选择一个游戏开始吧~</div>
+  <div class="home-grid">
+    <div class="home-card" onclick="startGame('recognize')">
+      <span class="emoji">🍎</span>
+      <span class="title">看图报数</span>
+    </div>
+    <div class="home-card" onclick="startGame('count')">
+      <span class="emoji">🔢</span>
+      <span class="title">数一数</span>
+    </div>
+    <div class="home-card" onclick="startGame('find')">
+      <span class="emoji">🔍</span>
+      <span class="title">找一找</span>
+    </div>
+    <div class="home-card" onclick="startGame('trace')">
+      <span class="emoji">✏️</span>
+      <span class="title">描一描</span>
+    </div>
+  </div>
+</div>
+
+<!-- 看图报数 -->
+<div class="page" id="page-recognize">
+  <div class="item-area" id="itemArea"></div>
+  <div class="count-question" id="recQuestion">这是几个？选出来！</div>
+  <div class="choices" id="recChoices"></div>
+  <div id="recFeedback" class="feedback-area">
+    <span class="feedback-emoji" id="recEmoji">🎉</span>
+    <div class="feedback-text" id="recText">太棒了！</div>
+  </div>
+</div>
+
+<!-- 数数 -->
+<div class="page" id="page-count">
+  <div class="count-question2" id="countQuestion">数一数有几个？</div>
+  <div class="counting-area" id="countArea"></div>
+  <input class="count-input" id="countInput" type="number" placeholder="?" min="1" max="20">
+  <button class="count-submit" onclick="checkCount()">确认！</button>
+</div>
+
+<!-- 找数字 -->
+<div class="page" id="page-find">
+  <div class="count-question2" id="findQuestion">找到数字 7！</div>
+  <div class="progress-bar"><div class="progress-fill" id="findProgress" style="width:0%"></div></div>
+  <div class="grid-5x5" id="findGrid"></div>
+</div>
+
+<!-- 描红 -->
+<div class="page" id="page-trace">
+  <div class="trace-prompt">用手指描一描这个数字~</div>
+  <div style="position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:8px">
+    <div class="trace-number" id="traceHint">5</div>
+    <canvas class="trace-canvas" id="traceCanvas"></canvas>
+  </div>
+  <button class="next-btn" onclick="nextTrace()">下一个数字 ➡️</button>
+</div>
+
+<script>
+// === AUDIO SYSTEM ===
+let audioCtx = null;
+let isMuted = false;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function toggleMute() {
+  isMuted = !isMuted;
+  updateMuteButtons();
+  if (isMuted) {
+    stopBgMusic();
+  } else {
+    if (currentGame && bgPlaying === false) {
+      startBgMusic();
+    }
+  }
+}
+
+function updateMuteButtons() {
+  const btns = [document.getElementById('muteBtn'), document.getElementById('homeMuteBtn')];
+  btns.forEach(btn => {
+    if (btn) {
+      if (isMuted) {
+        btn.textContent = '🔇';
+        btn.classList.add('muted');
+      } else {
+        btn.textContent = '🔊';
+        btn.classList.remove('muted');
+      }
+    }
+  });
+}
+
+function isAudioEnabled() {
+  return !isMuted;
+}
+
+function playNote(freq, startTime, duration, type='sine', vol=0.25, ctx=null) {
+  if (isMuted) return;
+  try {
+    const c = ctx || getAudioCtx();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.connect(gain);
+    gain.connect(c.destination);
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, c.currentTime + startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + startTime + duration);
+    osc.start(c.currentTime + startTime);
+    osc.stop(c.currentTime + startTime + duration + 0.05);
+  } catch(e) {}
+}
+
+function playTone(freq, duration, type='sine', vol=0.25) {
+  playNote(freq, 0, duration, type, vol);
+}
+
+function playCorrect() {
+  const c = getAudioCtx();
+  // Cheerful C major arpeggio
+  playNote(523, 0,    0.15, 'sine', 0.22, c); // C5
+  playNote(659, 0.1,  0.15, 'sine', 0.22, c); // E5
+  playNote(784, 0.2,  0.2,  'sine', 0.22, c);  // G5
+  playNote(1047,0.35, 0.3,  'sine', 0.25, c);  // C6
+}
+
+function playWrong() {
+  playTone(220, 0.25, 'sine', 0.15);
+  setTimeout(() => playTone(180, 0.3, 'sine', 0.1), 200);
+}
+
+function playClick() {
+  playTone(880, 0.05, 'square', 0.06);
+}
+
+function playSuccess() {
+  const c = getAudioCtx();
+  // Triumphant fanfare
+  [[523,0,0.12],[523,0.1,0.12],[659,0.2,0.12],[784,0.3,0.15],[1047,0.42,0.35]].forEach(([f,t,d]) => {
+    playNote(f, t, d, 'sine', 0.22, c);
+  });
+}
+
+// === HAPPY RHYTHMIC BACKGROUND MUSIC ===
+let bgInterval = null;
+let bgPlaying = false;
+
+const MELODY = [
+  [523, 0], [587, 0.25], [659, 0.5], [523, 0.75],
+  [784, 1], [659, 1.25], [523, 1.5], [440, 1.75],
+  [523, 2], [659, 2.25], [784, 2.5], [880, 2.75],
+  [784, 3], [659, 3.25], [523, 3.5], [0, 3.75]
+];
+const BASS = [
+  [262, 0], [0, 0.5], [294, 1], [0, 1.5],
+  [330, 2], [0, 2.5], [262, 3], [0, 3.75]
+];
+
+function startBgMusic() {
+  if (bgPlaying) return;
+  bgPlaying = true;
+  let step = 0;
+  const tempo = 500; // ms per beat
+
+  function playStep() {
+    if (!bgPlaying) return;
+    const ctx = getAudioCtx();
+    const s = step % MELODY.length;
+    const bs = step % BASS.length;
+
+    if (MELODY[s][0] > 0) {
+      playNote(MELODY[s][0], 0, 0.35, 'triangle', 0.12, ctx);
+    }
+    if (BASS[bs][0] > 0) {
+      playNote(BASS[bs][0], 0, 0.45, 'sine', 0.1, ctx);
+    }
+    step++;
+  }
+
+  playStep();
+  bgInterval = setInterval(playStep, tempo);
+}
+
+function stopBgMusic() {
+  bgPlaying = false;
+  if (bgInterval) { clearInterval(bgInterval); bgInterval = null; }
+}
+
+// === FULLSCREEN ===
+function toggleFullscreen() {
+  playClick();
+  const el = document.documentElement;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }
+}
+
+function updateFullscreenButtons() {
+  const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const btns = [document.getElementById('fullscreenBtn'), document.getElementById('homeFullscreenBtn')];
+  btns.forEach(btn => {
+    if (btn) {
+      btn.textContent = isFullscreen ? '📱' : '📺';
+    }
+  });
+}
+
+function updateFullscreenClass() {
+  const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (isFullscreen) {
+    document.body.classList.add('is-fullscreen');
+  } else {
+    document.body.classList.remove('is-fullscreen');
+  }
+}
+
+// === STATE ===
+let currentGame = '';
+let score = 0;
+let round = 0;
+const MAX_ROUNDS = 10;
+const GAME_NAMES = ['recognize','count','find','trace'];
+
+function goHome() {
+  playClick();
+  stopBgMusic();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-home').classList.add('active');
+  document.getElementById('topBar').style.display = 'none';
+  document.getElementById('homeTopBar').style.display = 'flex';
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showTopBar() {
+  document.getElementById('topBar').style.display = 'flex';
+  document.getElementById('homeTopBar').style.display = 'none';
+}
+
+function updateScore() {
+  document.getElementById('scoreNum').textContent = score;
+  document.getElementById('scoreDisplay').style.display = 'block';
+}
+
+function spawnConfetti() {
+  const container = document.getElementById('confetti');
+  const colors = ['#FF6B6B','#4ECDC4','#FFE66D','#A8E6CF','#FF8E8E','#DDA0DD','#87CEEB'];
+  for (let i = 0; i < 35; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left = Math.random() * 100 + '%';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDelay = Math.random() * 0.5 + 's';
+    const sz = Math.random() * 10 + 7;
+    el.style.width = sz + 'px';
+    el.style.height = sz + 'px';
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+  }
+}
+
+function startGame(type) {
+  currentGame = type;
+  score = 0;
+  round = 0;
+  showTopBar();
+  updateScore();
+  showPage('page-' + type);
+  // Re-enter fullscreen if it was active (iPad Safari may lose it on tap)
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  }
+  startBgMusic();
+  if (type === 'recognize') nextRecognize();
+  else if (type === 'count') nextCount();
+  else if (type === 'find') nextFind();
+  else if (type === 'trace') initTrace();
+}
+
+// === 看图报数 ===
+const FRUIT_EMOJIS = ['🍎','🍊','🍋','🥕','🍇','🍓','🌟','🐟','🦋','🌸'];
+
+function nextRecognize() {
+  if (round >= MAX_ROUNDS) { playSuccess(); showComplete('recognize'); return; }
+  round++;
+  const count = Math.floor(Math.random() * 9) + 1;
+  const fruit = FRUIT_EMOJIS[Math.floor(Math.random() * FRUIT_EMOJIS.length)];
+
+  const area = document.getElementById('itemArea');
+  area.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const span = document.createElement('span');
+    span.className = 'item';
+    span.textContent = fruit;
+    span.style.animationDelay = (i * 0.07) + 's';
+    area.appendChild(span);
+  }
+
+  const choices = [count];
+  while (choices.length < 6) {
+    const n = Math.floor(Math.random() * 9) + 1;
+    if (!choices.includes(n)) choices.push(n);
+  }
+  choices.sort(() => Math.random() - 0.5);
+
+  const container = document.getElementById('recChoices');
+  container.innerHTML = '';
+  choices.forEach(n => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = n;
+    btn.onclick = () => { playClick(); pickCount(n, count, btn); };
+    container.appendChild(btn);
+  });
+
+  document.getElementById('recFeedback').classList.remove('show');
+}
+
+function pickCount(picked, correct, btn) {
+  if (picked === correct) {
+    btn.classList.add('correct');
+    score++;
+    updateScore();
+    playCorrect();
+    spawnConfetti();
+    const msgs = ['太棒了！','真厉害！','太聪明啦！','数对了！'];
+    const emojis = ['🎉','⭐','👏','😄'];
+    const idx = Math.floor(Math.random() * 4);
+    document.getElementById('recEmoji').textContent = emojis[idx];
+    document.getElementById('recText').textContent = msgs[idx];
+    document.getElementById('recFeedback').classList.add('show');
+  } else {
+    btn.classList.add('wrong');
+    playWrong();
+    document.querySelectorAll('.choice-btn').forEach(b => { if (parseInt(b.textContent) === correct) b.classList.add('correct'); });
+    document.getElementById('recEmoji').textContent = '😊';
+    document.getElementById('recText').textContent = '是 ' + correct + ' 个，继续加油！';
+    document.getElementById('recFeedback').classList.add('show');
+  }
+  setTimeout(nextRecognize, 1800);
+}
+
+// === 数数 ===
+const COUNT_EMOJIS = ['⭐','🐟','🌟','🍊','🍋','🥕','🍇','🍓','🪀','🌸'];
+
+function nextCount() {
+  if (round >= MAX_ROUNDS) { playSuccess(); showComplete('count'); return; }
+  round++;
+  const target = Math.floor(Math.random() * 9) + 1;
+  const animal = COUNT_EMOJIS[Math.floor(Math.random() * COUNT_EMOJIS.length)];
+
+  document.getElementById('countQuestion').textContent = '数一数有几个 ' + animal + '？';
+  const area = document.getElementById('countArea');
+  area.innerHTML = '';
+  for (let i = 0; i < target; i++) {
+    const span = document.createElement('span');
+    span.className = 'count-item';
+    span.textContent = animal;
+    span.style.animationDelay = (i * 0.08) + 's';
+    area.appendChild(span);
+  }
+  document.getElementById('countInput').value = '';
+  window.countCorrect = target;
+}
+
+function checkCount() {
+  playClick();
+  const val = parseInt(document.getElementById('countInput').value);
+  if (val === window.countCorrect) {
+    score++;
+    updateScore();
+    playCorrect();
+    spawnConfetti();
+    document.getElementById('countQuestion').textContent = '太棒了！答对了！';
+    document.getElementById('countInput').style.borderColor = '#4ECDC4';
+  } else {
+    playWrong();
+    document.getElementById('countQuestion').textContent = '是 ' + window.countCorrect + ' 个，继续加油！';
+    document.getElementById('countInput').style.borderColor = '#FF6B6B';
+  }
+  setTimeout(nextCount, 1500);
+}
+
+// === 找数字 ===
+function nextFind() {
+  if (round >= MAX_ROUNDS) { playSuccess(); showComplete('find'); return; }
+  round++;
+  const target = Math.floor(Math.random() * 9) + 1;
+  document.getElementById('findQuestion').textContent = '找到数字 ' + target + '！';
+  document.getElementById('findProgress').style.width = ((round - 1) / MAX_ROUNDS * 100) + '%';
+
+  const grid = document.getElementById('findGrid');
+  grid.innerHTML = '';
+  const cells = [];
+  for (let i = 0; i < 25; i++) cells.push(Math.floor(Math.random() * 9) + 1);
+  const targetPos = Math.floor(Math.random() * 25);
+  cells[targetPos] = target;
+  window.findTarget = target;
+
+  cells.forEach((n, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    cell.textContent = n;
+    cell.dataset.num = n;
+    if (i === targetPos) cell.classList.add('highlighted');
+    cell.onclick = () => { playClick(); clickFind(cell, parseInt(cell.dataset.num)); };
+    grid.appendChild(cell);
+  });
+
+  setTimeout(() => {
+    document.querySelectorAll('.grid-cell').forEach(c => c.classList.remove('highlighted'));
+  }, 1000);
+}
+
+function clickFind(cell, num) {
+  if (cell.classList.contains('found')) return;
+  if (num === window.findTarget) {
+    cell.classList.add('found');
+    score++;
+    updateScore();
+    playCorrect();
+    spawnConfetti();
+    setTimeout(nextFind, 1000);
+  } else {
+    playWrong();
+    cell.style.background = '#FFE5E5';
+    setTimeout(() => cell.style.background = '', 300);
+  }
+}
+
+// === 描红 ===
+let traceNum = 1;
+let tracing = false;
+
+function initTrace() {
+  const canvas = document.getElementById('traceCanvas');
+  const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  let size;
+  if (isFullscreen) {
+    size = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.6);
+  } else {
+    size = Math.min(window.innerWidth * 0.8, window.innerHeight * 0.45, 300);
+  }
+  canvas.width = size;
+  canvas.height = size;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, size, size);
+  document.getElementById('traceHint').textContent = traceNum;
+
+  let lastX = 0, lastY = 0;
+
+  function getPos(e) {
+    const t = e.touches ? e.touches[0] : e;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (t.clientX - rect.left) * (canvas.width / rect.width),
+      y: (t.clientY - rect.top) * (canvas.height / rect.height)
+    };
+  }
+
+  function startDraw(e) {
+    e.preventDefault();
+    playClick();
+    tracing = true;
+    const pos = getPos(e);
+    lastX = pos.x; lastY = pos.y;
+  }
+
+  function moveDraw(e) {
+    e.preventDefault();
+    if (!tracing) return;
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = '#FF6B6B';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    lastX = pos.x; lastY = pos.y;
+  }
+
+  function endDraw() { tracing = false; }
+
+  canvas.ontouchstart = startDraw;
+  canvas.ontouchmove = moveDraw;
+  canvas.ontouchend = endDraw;
+  canvas.onmousedown = startDraw;
+  canvas.onmousemove = moveDraw;
+  canvas.onmouseup = endDraw;
+}
+
+function nextTrace() {
+  playClick();
+  traceNum = traceNum % 9 + 1;
+  const canvas = document.getElementById('traceCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  document.getElementById('traceHint').textContent = traceNum;
+}
+
+// === 完成页 ===
+function showComplete(game) {
+  stopBgMusic();
+  const emojis = ['🎉','🏆','⭐','🌟','👑'];
+  const messages = [
+    ['太厉害了！小天才！','全部答对啦！','你是最棒的！'],
+    ['数数小高手！','数数全部正确！','太聪明啦！'],
+    ['火眼金睛！','找数字高手！','全部找到了！'],
+    ['描得很好！','写得很棒！','继续加油！']
+  ];
+  const idx = GAME_NAMES.indexOf(game);
+  const page = document.getElementById('page-' + game);
+  page.innerHTML = `
+    <div class="game-complete">
+      <span class="big-emoji">${emojis[idx]}</span>
+      <h2>${messages[idx][Math.floor(Math.random()*3)]}</h2>
+      <p>得分：⭐ ${score} / ${MAX_ROUNDS}</p>
+      <button class="next-btn" onclick="startGame('${game}')">再玩一次 🔄</button>
+      <br>
+      <button class="next-btn" onclick="goHome()" style="background:linear-gradient(135deg,#4ECDC4,#6EE7DE)">返回首页</button>
+    </div>
+  `;
+}
+
+window.addEventListener('resize', () => {
+  if (currentGame === 'trace') initTrace();
+});
+
+document.addEventListener('fullscreenchange', () => {
+  updateFullscreenClass();
+  updateFullscreenButtons();
+  if (currentGame === 'trace') initTrace();
+});
+document.addEventListener('webkitfullscreenchange', () => {
+  updateFullscreenClass();
+  updateFullscreenButtons();
+  if (currentGame === 'trace') initTrace();
+});
+document.addEventListener('webkit-fullscreen-change', () => {
+  updateFullscreenClass();
+  updateFullscreenButtons();
+  if (currentGame === 'trace') initTrace();
+});
+</script>
+</body>
+</html>
